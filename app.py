@@ -32,20 +32,25 @@ def get_stock_data(ticker, start, end):
     if data.empty:
         return None
 
-    # Flatten MultiIndex if needed
+    # Flatten columns if MultiIndex
     if isinstance(data.columns, pd.MultiIndex):
-        data.columns = [col[0] if col[1] == '' else f"{col[0]}" for col in data.columns]
+        data.columns = [f"{col[0]}_{col[1]}" if col[1] else col[0] for col in data.columns]
 
-    close_col = [col for col in data.columns if col.lower().startswith("close")][0]
+    # Try to identify the correct 'Close' column
+    close_candidates = [col for col in data.columns if "close" in col.lower()]
+    if not close_candidates:
+        st.error("Could not find a 'Close' column in the data.")
+        return None
+
+    close_col = close_candidates[0]
 
     # Compute metrics
     data["Daily Return"] = data[close_col].pct_change()
     data["Cumulative Return"] = (1 + data["Daily Return"]).cumprod() - 1
     data["Max Drawdown"] = (data[close_col] / data[close_col].cummax()) - 1
-    data["Close"] = data[close_col]  # unify column name for charting
+    data["Close"] = data[close_col]  # unify for plotting
 
     return data
-
 with st.spinner(f"Loading data for {ticker}..."):
     df = get_stock_data(ticker, start_date, end_date)
 
