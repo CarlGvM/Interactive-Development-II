@@ -36,10 +36,13 @@ def get_stock_data(ticker, start, end):
     if isinstance(data.columns, pd.MultiIndex):
         data.columns = [col[0] if col[1] == '' else f"{col[0]}" for col in data.columns]
 
-    # Compute returns and metrics
-    data["Daily Return"] = data["Close"].pct_change()
+    close_col = [col for col in data.columns if col.lower().startswith("close")][0]
+
+    # Compute metrics
+    data["Daily Return"] = data[close_col].pct_change()
     data["Cumulative Return"] = (1 + data["Daily Return"]).cumprod() - 1
-    data["Max Drawdown"] = (data["Close"] / data["Close"].cummax()) - 1
+    data["Max Drawdown"] = (data[close_col] / data[close_col].cummax()) - 1
+    data["Close"] = data[close_col]  # unify column name for charting
 
     return data
 
