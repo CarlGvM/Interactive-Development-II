@@ -27,12 +27,20 @@ if start_date > end_date or start_date > date.today() or end_date > date.today()
 # --------------- FETCH & PROCESS DATA ------------------
 @st.cache_data(ttl=3600)
 def get_stock_data(ticker, start, end):
-    data = yf.download(ticker, start=start, end=end)
+    data = yf.download(ticker, start=start, end=end, group_by="ticker")
+
     if data.empty:
         return None
+
+    # Flatten MultiIndex if needed
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = [col[0] if col[1] == '' else f"{col[0]}" for col in data.columns]
+
+    # Compute returns and metrics
     data["Daily Return"] = data["Close"].pct_change()
     data["Cumulative Return"] = (1 + data["Daily Return"]).cumprod() - 1
     data["Max Drawdown"] = (data["Close"] / data["Close"].cummax()) - 1
+
     return data
 
 with st.spinner(f"Loading data for {ticker}..."):
